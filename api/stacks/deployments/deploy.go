@@ -153,7 +153,7 @@ func redeployWhenChangedSecondStage(
 		if stackutils.IsRelativePathStack(stack) {
 			err = deployer.DeployRemoteComposeStack(stack, endpoint, registries, true, false)
 		} else {
-			err = deployer.DeployComposeStack(stack, endpoint, registries, true, false)
+			err = deployer.DeployComposeStack(stack, endpoint, registries, true, false, nil)
 		}
 
 		if err != nil {

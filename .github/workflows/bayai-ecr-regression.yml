@@ -1,0 +1,38 @@
+name: BayAI ECR transaction regression
+on:
+  push:
+    branches: [fix/ecr-refresh-transaction-2.39.1]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.8'
+      - name: Transaction and upstream regression
+        run: go test -p 2 ./api/http/handler/stacks ./api/aws/ecr ./api/exec ./api/internal/registryutils/... ./api/stacks/deployments ./api/datastore ./api/dataservices/... ./api/database/boltdb -count=1 -timeout=180s
+      - name: Race detector on transaction and two-stack controls
+        run: go test -race -p 2 ./api/http/handler/stacks -run '^TestStackUpdateECRTransaction$' -count=1 -timeout=120s
+      - name: Compose upstream integration
+        run: go test -p 1 ./pkg/libstack/compose ./api/exec -count=1 -timeout=180s -args -integration
+      - name: Build Linux AMD64 server
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -p 2 -trimpath -ldflags="-s -w -X github.com/portainer/portainer/pkg/build.GitCommit=${{ github.sha }} -X github.com/portainer/portainer/pkg/build.ImageTag=2.39.1-bayai-fix" -o dist/portainer ./api/cmd/portainer
+      - name: Build and exercise AMD64 image in isolated Docker
+        run: |
+          docker build --build-arg PATCH_COMMIT=${{ github.sha }} -f lab/Dockerfile -t portainer:2.39.1-bayai-fix .
+          lab/run-image-e2e.sh
+          docker save portainer:2.39.1-bayai-fix | gzip > portainer-linux-amd64.tar.gz
+          sha256sum portainer-linux-amd64.tar.gz > portainer-linux-amd64.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portainer-linux-amd64-${{ github.sha }}
+          path: |
+            dist/portainer
+            portainer-linux-amd64.tar.gz
+            portainer-linux-amd64.tar.gz.sha256
+            lab-results/

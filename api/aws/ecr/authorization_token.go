@@ -8,8 +8,16 @@ import (
 	"time"
 )
 
+const authorizationTokenTimeout = 30 * time.Second
+
 func (s *Service) GetEncodedAuthorizationToken() (token *string, expiry *time.Time, err error) {
-	getAuthorizationTokenOutput, err := s.client.GetAuthorizationToken(context.TODO(), nil)
+	return s.getEncodedAuthorizationToken(context.Background())
+}
+
+func (s *Service) getEncodedAuthorizationToken(ctx context.Context) (token *string, expiry *time.Time, err error) {
+	ctx, cancel := context.WithTimeout(ctx, authorizationTokenTimeout)
+	defer cancel()
+	getAuthorizationTokenOutput, err := s.client.GetAuthorizationToken(ctx, nil)
 	if err != nil {
 		return
 	}
@@ -20,6 +28,9 @@ func (s *Service) GetEncodedAuthorizationToken() (token *string, expiry *time.Ti
 	}
 
 	authData := getAuthorizationTokenOutput.AuthorizationData[0]
+	if authData.AuthorizationToken == nil || authData.ExpiresAt == nil {
+		return nil, nil, errors.New("incomplete ECR authorization data")
+	}
 
 	token = authData.AuthorizationToken
 	expiry = authData.ExpiresAt
@@ -28,7 +39,12 @@ func (s *Service) GetEncodedAuthorizationToken() (token *string, expiry *time.Ti
 }
 
 func (s *Service) GetAuthorizationToken() (token *string, expiry *time.Time, err error) {
-	tokenEncodedStr, expiry, err := s.GetEncodedAuthorizationToken()
+	return s.GetAuthorizationTokenWithContext(context.Background())
+}
+
+// GetAuthorizationTokenWithContext bounds the entire SDK operation, including retries.
+func (s *Service) GetAuthorizationTokenWithContext(ctx context.Context) (token *string, expiry *time.Time, err error) {
+	tokenEncodedStr, expiry, err := s.getEncodedAuthorizationToken(ctx)
 	if err != nil {
 		return
 	}

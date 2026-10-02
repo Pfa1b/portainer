@@ -402,7 +402,7 @@ type testStackDeployer struct {
 	deployments.StackDeployer
 }
 
-func (testStackDeployer) DeployComposeStack(stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, forcePullImage, forceRecreate bool) error {
+func (testStackDeployer) DeployComposeStack(stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, forcePullImage, forceRecreate bool, registryUpdate portainer.RegistryUpdateFunc) error {
 	return nil
 }
 

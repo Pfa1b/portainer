@@ -66,7 +66,7 @@ func (manager *ComposeStackManager) Up(ctx context.Context, stack *portainer.Sta
 			EnvFilePath: envFilePath,
 			Host:        url,
 			ProjectName: stack.Name,
-			Registries:  portainerRegistriesToAuthConfigs(manager.dataStore, options.Registries),
+			Registries:  portainerRegistriesToAuthConfigs(manager.dataStore, options.Registries, options.RegistryUpdate),
 		},
 		ForceRecreate:        options.ForceRecreate,
 		AbortOnContainerExit: options.AbortOnContainerExit,
@@ -97,7 +97,7 @@ func (manager *ComposeStackManager) Run(ctx context.Context, stack *portainer.St
 			EnvFilePath: envFilePath,
 			Host:        url,
 			ProjectName: stack.Name,
-			Registries:  portainerRegistriesToAuthConfigs(manager.dataStore, options.Registries),
+			Registries:  portainerRegistriesToAuthConfigs(manager.dataStore, options.Registries, options.RegistryUpdate),
 		},
 		Remove:   options.Remove,
 		Args:     options.Args,
@@ -146,7 +146,7 @@ func (manager *ComposeStackManager) Pull(ctx context.Context, stack *portainer.S
 		EnvFilePath: envFilePath,
 		Host:        url,
 		ProjectName: stack.Name,
-		Registries:  portainerRegistriesToAuthConfigs(manager.dataStore, options.Registries),
+		Registries:  portainerRegistriesToAuthConfigs(manager.dataStore, options.Registries, options.RegistryUpdate),
 	})
 	return errors.Wrap(err, "failed to pull images of the stack")
 }
@@ -229,7 +229,10 @@ func copyConfigEnvVars(w io.Writer, envs []portainer.Pair) error {
 	return nil
 }
 
-func portainerRegistriesToAuthConfigs(tx dataservices.DataStoreTx, registries []portainer.Registry) []types.AuthConfig {
+func portainerRegistriesToAuthConfigs(tx dataservices.DataStoreTx, registries []portainer.Registry, update portainer.RegistryUpdateFunc) []types.AuthConfig {
+	if update == nil && tx != nil {
+		update = tx.Registry().Update
+	}
 	var authConfigs []types.AuthConfig
 
 	for _, r := range registries {
@@ -242,7 +245,7 @@ func portainerRegistriesToAuthConfigs(tx dataservices.DataStoreTx, registries []
 		if r.Authentication {
 			var err error
 
-			ac.Username, ac.Password, err = getEffectiveRegUsernamePassword(tx, &r)
+			ac.Username, ac.Password, err = getEffectiveRegUsernamePasswordWithUpdater(update, &r)
 			if err != nil {
 				continue
 			}
@@ -255,7 +258,11 @@ func portainerRegistriesToAuthConfigs(tx dataservices.DataStoreTx, registries []
 }
 
 func getEffectiveRegUsernamePassword(tx dataservices.DataStoreTx, registry *portainer.Registry) (string, string, error) {
-	if err := registryutils.EnsureRegTokenValid(tx, registry); err != nil {
+	return getEffectiveRegUsernamePasswordWithUpdater(tx.Registry().Update, registry)
+}
+
+func getEffectiveRegUsernamePasswordWithUpdater(update portainer.RegistryUpdateFunc, registry *portainer.Registry) (string, string, error) {
+	if err := registryutils.EnsureRegTokenValidWithUpdater(update, registry); err != nil {
 		log.Warn().
 			Err(err).
 			Str("RegistryName", registry.Name).

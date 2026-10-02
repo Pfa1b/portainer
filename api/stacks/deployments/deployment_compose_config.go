@@ -16,6 +16,7 @@ type ComposeStackDeploymentConfig struct {
 	stack          *portainer.Stack
 	endpoint       *portainer.Endpoint
 	registries     []portainer.Registry
+	registryUpdate portainer.RegistryUpdateFunc
 	isAdmin        bool
 	user           *portainer.User
 	forcePullImage bool
@@ -48,6 +49,7 @@ func CreateComposeStackDeploymentConfigTx(tx dataservices.DataStoreTx, securityC
 		stack:          stack,
 		endpoint:       endpoint,
 		registries:     filteredRegistries,
+		registryUpdate: tx.Registry().Update,
 		isAdmin:        securityContext.IsAdmin,
 		user:           user,
 		forcePullImage: forcePullImage,
@@ -89,7 +91,7 @@ func (config *ComposeStackDeploymentConfig) Deploy() error {
 		return config.StackDeployer.DeployRemoteComposeStack(config.stack, config.endpoint, config.registries, config.forcePullImage, config.ForceCreate)
 	}
 
-	return config.StackDeployer.DeployComposeStack(config.stack, config.endpoint, config.registries, config.forcePullImage, config.ForceCreate)
+	return config.StackDeployer.DeployComposeStack(config.stack, config.endpoint, config.registries, config.forcePullImage, config.ForceCreate, config.registryUpdate)
 }
 
 func (config *ComposeStackDeploymentConfig) GetResponse() string {

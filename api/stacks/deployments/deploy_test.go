@@ -82,7 +82,7 @@ func (s noopDeployer) DeploySwarmStack(stack *portainer.Stack, endpoint *portain
 	return nil
 }
 
-func (s noopDeployer) DeployComposeStack(stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, forcePullImage, forceRecreate bool) error {
+func (s noopDeployer) DeployComposeStack(stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, forcePullImage, forceRecreate bool, registryUpdate portainer.RegistryUpdateFunc) error {
 	return nil
 }
 
