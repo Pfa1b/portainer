@@ -13,7 +13,7 @@ done
 if docker network inspect astra-portainer-lab >/dev/null 2>&1; then
   echo 'Refusing to reuse existing lab network' >&2; exit 2
 fi
-scratch=$(mktemp -d)
+scratch=$(mktemp -d "$root/.astra-lab.XXXXXX")
 cleanup() {
   docker logs astra-ecr-fake > "$results/fake-ecr.log" 2>&1 || true
   docker logs astra-portainer-fixed 2>&1 | grep -E 'ECR token refresh|ECR registry persistence|compose deployment|stack update transaction' > "$results/stages.log" || true
