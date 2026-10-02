@@ -15,7 +15,7 @@ import (
 
 type BaseStackDeployer interface {
 	DeploySwarmStack(stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, prune, pullImage bool) error
-	DeployComposeStack(stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, forcePullImage, forceRecreate bool) error
+	DeployComposeStack(stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, forcePullImage, forceRecreate bool, registryUpdate portainer.RegistryUpdateFunc) error
 	DeployKubernetesStack(stack *portainer.Stack, endpoint *portainer.Endpoint, user *portainer.User) error
 }
 
@@ -61,11 +61,11 @@ func (d *stackDeployer) DeploySwarmStack(stack *portainer.Stack, endpoint *porta
 	return d.swarmStackManager.Deploy(stack, prune, pullImage, endpoint)
 }
 
-func (d *stackDeployer) DeployComposeStack(stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, forcePullImage, forceRecreate bool) error {
+func (d *stackDeployer) DeployComposeStack(stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, forcePullImage, forceRecreate bool, registryUpdate portainer.RegistryUpdateFunc) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	options := portainer.ComposeOptions{Registries: registries}
+	options := portainer.ComposeOptions{Registries: registries, RegistryUpdate: registryUpdate}
 
 	// --force-recreate doesn't pull updated images
 	if forcePullImage {

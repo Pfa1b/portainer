@@ -104,6 +104,11 @@ func (handler *Handler) stackUpdate(w http.ResponseWriter, r *http.Request) *htt
 		}
 		return nil
 	})
+	if err != nil {
+		log.Debug().Int("stack_id", stackID).Msg("stack update transaction rolled back or failed")
+	} else {
+		log.Debug().Int("stack_id", stackID).Msg("stack update transaction committed")
+	}
 	return response.TxResponse(w, stack, err)
 }
 
@@ -253,7 +258,10 @@ func (handler *Handler) updateComposeStack(tx dataservices.DataStoreTx, r *http.
 	}
 
 	// Deploy the stack
-	if err := composeDeploymentConfig.Deploy(); err != nil {
+	log.Debug().Int("stack_id", int(stack.ID)).Msg("compose deployment started")
+	deployErr := composeDeploymentConfig.Deploy()
+	log.Debug().Int("stack_id", int(stack.ID)).Bool("success", deployErr == nil).Msg("compose deployment finished")
+	if err := deployErr; err != nil {
 		if rollbackErr := handler.FileService.RollbackStackFile(stackFolder, stack.EntryPoint); rollbackErr != nil {
 			log.Warn().Err(rollbackErr).Msg("rollback stack file error")
 		}

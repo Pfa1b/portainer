@@ -1513,8 +1513,13 @@ type (
 		ValidateFlags(flags *CLIFlags) error
 	}
 
+	// RegistryUpdateFunc persists a refreshed registry, optionally in an existing transaction.
+	RegistryUpdateFunc func(RegistryID, *Registry) error
+
 	ComposeOptions struct {
-		Registries []Registry
+		// RegistryUpdate must only be used synchronously while its transaction is open.
+		RegistryUpdate RegistryUpdateFunc
+		Registries     []Registry
 	}
 
 	ComposeUpOptions struct {
